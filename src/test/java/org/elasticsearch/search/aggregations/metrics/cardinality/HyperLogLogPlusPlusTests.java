@@ -123,4 +123,15 @@ public class HyperLogLogPlusPlusTests extends ElasticsearchTestCase {
         assertEquals(1, counts.cardinality(0));
     }
 
+    @Test
+    public void precisionFromThreshold() {
+        assertEquals(4, HyperLogLogPlusPlus.precisionFromThreshold(0));
+        assertEquals(6, HyperLogLogPlusPlus.precisionFromThreshold(10));
+        assertEquals(10, HyperLogLogPlusPlus.precisionFromThreshold(100));
+        assertEquals(13, HyperLogLogPlusPlus.precisionFromThreshold(1000));
+        assertEquals(16, HyperLogLogPlusPlus.precisionFromThreshold(10000));
+        assertEquals(18, HyperLogLogPlusPlus.precisionFromThreshold(100000));
+        assertEquals(18, HyperLogLogPlusPlus.precisionFromThreshold(1000000));
+    }
+
 }

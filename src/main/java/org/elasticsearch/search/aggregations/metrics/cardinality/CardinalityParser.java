@@ -19,6 +19,7 @@
 
 package org.elasticsearch.search.aggregations.metrics.cardinality;
 
+import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.index.fielddata.IndexFieldData;
 import org.elasticsearch.index.mapper.FieldMapper;
@@ -39,6 +40,8 @@ import java.util.Map;
 
 public class CardinalityParser implements Aggregator.Parser {
 
+    private static final ParseField PRECISION_THRESHOLD = new ParseField("precision_threshold");
+
     @Override
     public String type() {
         return InternalCardinality.TYPE.name();
@@ -46,7 +49,7 @@ public class CardinalityParser implements Aggregator.Parser {
 
     @Override
     public AggregatorFactory parse(String name, XContentParser parser, SearchContext context) throws IOException {
-        int precision = -1;
+        long precisionThreshold = -1;
         Boolean rehash = null;
         String field = null;
         String script = null;
@@ -81,8 +84,8 @@ public class CardinalityParser implements Aggregator.Parser {
                     throw new SearchParseException(context, "Unknown key for a " + token + " in [" + name + "]: [" + currentFieldName + "].");
                 }
             } else if (token == XContentParser.Token.VALUE_NUMBER) {
-                if ("precision".equals(currentFieldName)) {
-                    precision = parser.intValue();
+                if (PRECISION_THRESHOLD.match(currentFieldName)) {
+                    precisionThreshold = parser.longValue();
                 } else {
                     throw new SearchParseException(context, "Unknown key for a " + token + " in [" + name + "]: [" + currentFieldName + "].");
                 }
@@ -125,7 +128,7 @@ public class CardinalityParser implements Aggregator.Parser {
             rehash = true;
         }
 
-        return new CardinalityAggregatorFactory(name, config, precision, rehash);
+        return new CardinalityAggregatorFactory(name, config, precisionThreshold, rehash);
     }
 
 }

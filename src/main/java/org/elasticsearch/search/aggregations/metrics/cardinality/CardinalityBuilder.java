@@ -26,15 +26,15 @@ import java.io.IOException;
 
 public class CardinalityBuilder extends ValuesSourceMetricsAggregationBuilder<CardinalityBuilder> {
 
-    private Integer precision;
+    private Long precisionThreshold;
     private Boolean rehash;
 
     public CardinalityBuilder(String name) {
         super(name, InternalCardinality.TYPE.name());
     }
 
-    public CardinalityBuilder precision(int precision) {
-        this.precision = precision;
+    public CardinalityBuilder precisionThreshold(long precisionThreshold) {
+        this.precisionThreshold = precisionThreshold;
         return this;
     }
 
@@ -46,8 +46,8 @@ public class CardinalityBuilder extends ValuesSourceMetricsAggregationBuilder<Ca
     @Override
     protected void internalXContent(XContentBuilder builder, Params params) throws IOException {
         super.internalXContent(builder, params);
-        if (precision != null) {
-            builder.field("precision", precision);
+        if (precisionThreshold != null) {
+            builder.field("precision_threshold", precisionThreshold);
         }
         if (rehash != null) {
             builder.field("rehash", rehash);

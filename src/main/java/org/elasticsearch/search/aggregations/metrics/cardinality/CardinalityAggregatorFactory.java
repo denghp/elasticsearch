@@ -30,17 +30,17 @@ import org.elasticsearch.search.aggregations.support.numeric.NumericValuesSource
 
 final class CardinalityAggregatorFactory extends ValueSourceAggregatorFactory<ValuesSource> {
 
-    private final int precision;
+    private final long precisionThreshold;
     private final boolean rehash;
 
-    CardinalityAggregatorFactory(String name, ValuesSourceConfig valuesSourceConfig, int precision, boolean rehash) {
+    CardinalityAggregatorFactory(String name, ValuesSourceConfig valuesSourceConfig, long precisionThreshold, boolean rehash) {
         super(name, InternalCardinality.TYPE.name(), valuesSourceConfig);
-        this.precision = precision;
+        this.precisionThreshold = precisionThreshold;
         this.rehash = rehash;
     }
 
     private int precision(Aggregator parent) {
-        return precision < 0 ? defaultPrecision(parent) : precision;
+        return precisionThreshold < 0 ? defaultPrecision(parent) : HyperLogLogPlusPlus.precisionFromThreshold(precisionThreshold);
     }
 
     @Override

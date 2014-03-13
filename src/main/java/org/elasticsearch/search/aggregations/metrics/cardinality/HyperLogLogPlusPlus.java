@@ -22,6 +22,7 @@ package org.elasticsearch.search.aggregations.metrics.cardinality;
 import com.google.common.base.Preconditions;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.OpenBitSet;
+import org.apache.lucene.util.RamUsageEstimator;
 import org.apache.lucene.util.packed.PackedInts;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.common.io.stream.StreamInput;
@@ -61,6 +62,18 @@ public final class HyperLogLogPlusPlus implements Releasable {
     private static final boolean HYPERLOGLOG = true;
     private static final float MAX_LOAD_FACTOR = 0.75f;
     private static final int P2 = 25;
+
+    /**
+     * Compute the required precision so that <code>count</code> distinct entries
+     * would be counted with linear counting.
+     */
+    public static int precisionFromThreshold(long count) {
+        final long hashTableEntries = (long) Math.ceil(count / MAX_LOAD_FACTOR);
+        int precision = PackedInts.bitsRequired(hashTableEntries * RamUsageEstimator.NUM_BYTES_INT);
+        precision = Math.max(precision, MIN_PRECISION);
+        precision = Math.min(precision, MAX_PRECISION);
+        return precision;
+    }
 
     // these static tables come from the appendix of the paper
     private static final double[][] RAW_ESTIMATE_DATA = {

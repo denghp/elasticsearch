@@ -25,7 +25,6 @@ import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.metrics.cardinality.Cardinality;
-import org.elasticsearch.search.aggregations.metrics.cardinality.HyperLogLogPlusPlus;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
 import org.junit.Before;
 import org.junit.Test;
@@ -49,7 +48,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
     }
 
     long numDocs;
-    int precision;
+    long precisionThreshold;
 
     @Before
     public void init() throws Exception {
@@ -108,7 +107,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
                         .endObject().endObject()).execute().actionGet();
 
         numDocs = randomIntBetween(2, 100);
-        precision = randomIntBetween(HyperLogLogPlusPlus.MIN_PRECISION, HyperLogLogPlusPlus.MAX_PRECISION);
+        precisionThreshold = randomIntBetween(0, 1 << randomInt(20));
         IndexRequestBuilder[] builders = new IndexRequestBuilder[(int) numDocs];
         for (int i = 0; i < numDocs; ++i) {
             builders[i] = client().prepareIndex("idx", "type").setSource(jsonBuilder()
@@ -127,7 +126,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
     }
 
     private void assertCount(Cardinality count, long value) {
-        if (value <= (1 << precision) * 3 / 16) {
+        if (value <= precisionThreshold) {
             // linear counting should be picked, and should be accurate
             assertEquals(value, count.getValue());
         } else {
@@ -146,7 +145,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
     @Test
     public void unmapped() throws Exception {
         SearchResponse response = client().prepareSearch("idx_unmapped").setTypes("type")
-                .addAggregation(cardinality("cardinality").precision(precision).field("str_value"))
+                .addAggregation(cardinality("cardinality").precisionThreshold(precisionThreshold).field("str_value"))
                 .execute().actionGet();
 
         assertSearchResponse(response);
@@ -160,7 +159,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
     @Test
     public void partiallyUnmapped() throws Exception {
         SearchResponse response = client().prepareSearch("idx", "idx_unmapped").setTypes("type")
-                .addAggregation(cardinality("cardinality").precision(precision).field("str_value"))
+                .addAggregation(cardinality("cardinality").precisionThreshold(precisionThreshold).field("str_value"))
                 .execute().actionGet();
 
         assertSearchResponse(response);
@@ -174,7 +173,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
     @Test
     public void singleValuedString() throws Exception {
         SearchResponse response = client().prepareSearch("idx").setTypes("type")
-                .addAggregation(cardinality("cardinality").precision(precision).field("str_value"))
+                .addAggregation(cardinality("cardinality").precisionThreshold(precisionThreshold).field("str_value"))
                 .execute().actionGet();
 
         assertSearchResponse(response);
@@ -188,7 +187,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
     @Test
     public void singleValuedStringHashed() throws Exception {
         SearchResponse response = client().prepareSearch("idx").setTypes("type")
-                .addAggregation(cardinality("cardinality").precision(precision).field("str_value.hash"))
+                .addAggregation(cardinality("cardinality").precisionThreshold(precisionThreshold).field("str_value.hash"))
                 .execute().actionGet();
 
         assertSearchResponse(response);
@@ -202,7 +201,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
     @Test
     public void singleValuedNumeric() throws Exception {
         SearchResponse response = client().prepareSearch("idx").setTypes("type")
-                .addAggregation(cardinality("cardinality").precision(precision).field(singleNumericField(false)))
+                .addAggregation(cardinality("cardinality").precisionThreshold(precisionThreshold).field(singleNumericField(false)))
                 .execute().actionGet();
 
         assertSearchResponse(response);
@@ -216,7 +215,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
     @Test
     public void singleValuedNumericHashed() throws Exception {
         SearchResponse response = client().prepareSearch("idx").setTypes("type")
-                .addAggregation(cardinality("cardinality").precision(precision).field(singleNumericField(true)))
+                .addAggregation(cardinality("cardinality").precisionThreshold(precisionThreshold).field(singleNumericField(true)))
                 .execute().actionGet();
 
         assertSearchResponse(response);
@@ -230,7 +229,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
     @Test
     public void multiValuedString() throws Exception {
         SearchResponse response = client().prepareSearch("idx").setTypes("type")
-                .addAggregation(cardinality("cardinality").precision(precision).field("str_values"))
+                .addAggregation(cardinality("cardinality").precisionThreshold(precisionThreshold).field("str_values"))
                 .execute().actionGet();
 
         assertSearchResponse(response);
@@ -244,7 +243,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
     @Test
     public void multiValuedStringHashed() throws Exception {
         SearchResponse response = client().prepareSearch("idx").setTypes("type")
-                .addAggregation(cardinality("cardinality").precision(precision).field("str_values.hash"))
+                .addAggregation(cardinality("cardinality").precisionThreshold(precisionThreshold).field("str_values.hash"))
                 .execute().actionGet();
 
         assertSearchResponse(response);
@@ -258,7 +257,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
     @Test
     public void multiValuedNumeric() throws Exception {
         SearchResponse response = client().prepareSearch("idx").setTypes("type")
-                .addAggregation(cardinality("cardinality").precision(precision).field(multiNumericField(false)))
+                .addAggregation(cardinality("cardinality").precisionThreshold(precisionThreshold).field(multiNumericField(false)))
                 .execute().actionGet();
 
         assertSearchResponse(response);
@@ -272,7 +271,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
     @Test
     public void multiValuedNumericHashed() throws Exception {
         SearchResponse response = client().prepareSearch("idx").setTypes("type")
-                .addAggregation(cardinality("cardinality").precision(precision).field(multiNumericField(true)))
+                .addAggregation(cardinality("cardinality").precisionThreshold(precisionThreshold).field(multiNumericField(true)))
                 .execute().actionGet();
 
         assertSearchResponse(response);
@@ -286,7 +285,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
     @Test
     public void singleValuedStringScript() throws Exception {
         SearchResponse response = client().prepareSearch("idx").setTypes("type")
-                .addAggregation(cardinality("cardinality").precision(precision).script("doc['str_value'].value"))
+                .addAggregation(cardinality("cardinality").precisionThreshold(precisionThreshold).script("doc['str_value'].value"))
                 .execute().actionGet();
 
         assertSearchResponse(response);
@@ -300,7 +299,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
     @Test
     public void multiValuedStringScript() throws Exception {
         SearchResponse response = client().prepareSearch("idx").setTypes("type")
-                .addAggregation(cardinality("cardinality").precision(precision).script("doc['str_values'].values"))
+                .addAggregation(cardinality("cardinality").precisionThreshold(precisionThreshold).script("doc['str_values'].values"))
                 .execute().actionGet();
 
         assertSearchResponse(response);
@@ -314,7 +313,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
     @Test
     public void singleValuedNumericScript() throws Exception {
         SearchResponse response = client().prepareSearch("idx").setTypes("type")
-                .addAggregation(cardinality("cardinality").precision(precision).script("doc['" + singleNumericField(false) + "'].value"))
+                .addAggregation(cardinality("cardinality").precisionThreshold(precisionThreshold).script("doc['" + singleNumericField(false) + "'].value"))
                 .execute().actionGet();
 
         assertSearchResponse(response);
@@ -328,7 +327,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
     @Test
     public void multiValuedNumericScript() throws Exception {
         SearchResponse response = client().prepareSearch("idx").setTypes("type")
-                .addAggregation(cardinality("cardinality").precision(precision).script("doc['" + multiNumericField(false) + "'].values"))
+                .addAggregation(cardinality("cardinality").precisionThreshold(precisionThreshold).script("doc['" + multiNumericField(false) + "'].values"))
                 .execute().actionGet();
 
         assertSearchResponse(response);
@@ -342,7 +341,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
     @Test
     public void singleValuedStringValueScript() throws Exception {
         SearchResponse response = client().prepareSearch("idx").setTypes("type")
-                .addAggregation(cardinality("cardinality").precision(precision).field("str_value").script("_value"))
+                .addAggregation(cardinality("cardinality").precisionThreshold(precisionThreshold).field("str_value").script("_value"))
                 .execute().actionGet();
 
         assertSearchResponse(response);
@@ -356,7 +355,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
     @Test
     public void multiValuedStringValueScript() throws Exception {
         SearchResponse response = client().prepareSearch("idx").setTypes("type")
-                .addAggregation(cardinality("cardinality").precision(precision).field("str_values").script("_value"))
+                .addAggregation(cardinality("cardinality").precisionThreshold(precisionThreshold).field("str_values").script("_value"))
                 .execute().actionGet();
 
         assertSearchResponse(response);
@@ -370,7 +369,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
     @Test
     public void singleValuedNumericValueScript() throws Exception {
         SearchResponse response = client().prepareSearch("idx").setTypes("type")
-                .addAggregation(cardinality("cardinality").precision(precision).field(singleNumericField(false)).script("_value"))
+                .addAggregation(cardinality("cardinality").precisionThreshold(precisionThreshold).field(singleNumericField(false)).script("_value"))
                 .execute().actionGet();
 
         assertSearchResponse(response);
@@ -384,7 +383,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
     @Test
     public void multiValuedNumericValueScript() throws Exception {
         SearchResponse response = client().prepareSearch("idx").setTypes("type")
-                .addAggregation(cardinality("cardinality").precision(precision).field(multiNumericField(false)).script("_value"))
+                .addAggregation(cardinality("cardinality").precisionThreshold(precisionThreshold).field(multiNumericField(false)).script("_value"))
                 .execute().actionGet();
 
         assertSearchResponse(response);
@@ -398,7 +397,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
     @Test
     public void asSubAgg() throws Exception {
         SearchResponse response = client().prepareSearch("idx").setTypes("type")
-                .addAggregation(terms("terms").field("str_value").subAggregation(cardinality("cardinality").precision(precision).field("str_values")))
+                .addAggregation(terms("terms").field("str_value").subAggregation(cardinality("cardinality").precisionThreshold(precisionThreshold).field("str_values")))
                 .execute().actionGet();
 
         assertSearchResponse(response);
@@ -415,7 +414,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
     @Test
     public void asSubAggHashed() throws Exception {
         SearchResponse response = client().prepareSearch("idx").setTypes("type")
-                .addAggregation(terms("terms").field("str_value").subAggregation(cardinality("cardinality").precision(precision).field("str_values.hash")))
+                .addAggregation(terms("terms").field("str_value").subAggregation(cardinality("cardinality").precisionThreshold(precisionThreshold).field("str_values.hash")))
                 .execute().actionGet();
 
         assertSearchResponse(response);
